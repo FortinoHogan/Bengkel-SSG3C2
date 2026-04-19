@@ -4,5 +4,5 @@ export interface IResponse<T> {
 }
 
 export interface IModel {
-  createdAt?: string
+  created_at?: string
 }

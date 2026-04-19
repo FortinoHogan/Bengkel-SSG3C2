@@ -27,18 +27,46 @@ export interface IBengkelDetail extends IModel {
   payload: JSON
 }
 
-export interface GetBengkelModuleListPayload {
+export interface GetBengkelModulePayload {
   environmentId: number
   bengkelId: number
 }
 
 export interface GetBengkelDetailListPayload {
-  bengkelModuleId: number
+  bengkelId: number
+  page: number
+  size: number
+  searchQuery: string
+  sortBy?: keyof IBengkelDetail
+  sortOrder?: "asc" | "desc"
 }
 
 export interface AddBengkelDetailPayload {
   url: string
   description: string
-  bengkelModuleId: number
+  bengkelId: number
   payload: JSON
+}
+
+export interface UpdateBengkelDetailPayload {
+  bengkelDetailId: number
+  url: string
+  description: string
+  payload: JSON
+}
+
+export interface UpdateBengkelModulePayload {
+  bengkelModuleId: number
+  baseUrl: string
+  basicAuth: string
+  postmanEnv?: JSON
+}
+
+export interface AddMsBengkelPayload {
+  bengkelName: string
+}
+
+export interface UpdateMsBengkelPayload {
+  bengkelId: number
+  bengkelName: string
 }

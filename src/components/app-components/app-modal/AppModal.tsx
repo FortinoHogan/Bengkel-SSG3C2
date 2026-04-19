@@ -3,9 +3,9 @@ import type { AppModalProps } from './AppModal.interface'
 
 const AppModal = (props: AppModalProps) => {
     const { open, onClose, onSubmit, title, description, isShowCancel = false } = props;
-    if (!open) return null;
+    
     return (
-        <AlertDialog open={open}>
+        <AlertDialog open={open} onOpenChange={onClose}> 
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>{title}</AlertDialogTitle>

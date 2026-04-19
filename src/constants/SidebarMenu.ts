@@ -11,10 +11,11 @@ export const sidebarMenu: AppSidebarGroup[] = [
     ],
   },
   {
-    title: "User",
+    title: "Management",
     icon: User,
     items: [
       { title: "Manage User", url: routes.manageUser },
+      { title: "Manage Bengkel", url: routes.manageBengkel },
     ],
     isAdminOnly: true,
   }

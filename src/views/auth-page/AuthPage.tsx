@@ -34,13 +34,7 @@ const AuthPage = () => {
         const { data, error } = await UserService.getUserByEmail(email, setIsLoading);
         if (error || !data) {
             setAuthStatus('error');
-            setAuthMessage('Account is not authenticated');
-            return;
-        }
-
-        if (error || !data) {
-            setAuthStatus('error');
-            setAuthMessage('Account is not authenticated');
+            setAuthMessage('Account is not authenticated. Please contact administrator to authenticate your account.');
             return;
         }
         setProfile(data);
