@@ -16,6 +16,7 @@ export interface IBengkelModule extends IModel {
   environmentId: number
   baseUrl: string
   basicAuth: string
+  postmanEnv: JSON
 }
 
 export interface IBengkelDetail extends IModel {
