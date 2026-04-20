@@ -1,4 +1,5 @@
 import { sidebarMenu } from "@/constants/SidebarMenu"
+import type { AppSidebarGroup } from "./AppSidebar.interface"
 import {
     Sidebar,
     SidebarContent,
@@ -40,6 +41,28 @@ export function AppSidebar() {
     const [errorMessage, setErrorMessage] = useState("");
 
     const filteredMenu = sidebarMenu.filter(group => !group.isAdminOnly || profile?.isAdmin);
+
+    const bengkelGroup: AppSidebarGroup | null = bengkelList.length
+        ? {
+            title: "Bengkel",
+            items: bengkelList.map((bengkel) => ({
+                icon: Hammer,
+                title: bengkel.name,
+                menus: [
+                    {
+                        title: "Bengkel List",
+                        url: routes.bengkel.replace(":id", String(bengkel.id)),
+                    },
+                    {
+                        title: "Env Management",
+                        url: routes.environmentManagement.replace(":id", String(bengkel.id)),
+                    },
+                ],
+            })),
+        }
+        : null
+
+    const allMenuGroups = bengkelGroup ? [...filteredMenu, bengkelGroup] : filteredMenu
 
     const handleLogout = () => {
         handleLogoutAuth();
@@ -84,8 +107,8 @@ export function AppSidebar() {
                 </SidebarMenu>
             </SidebarHeader>
             <SidebarContent>
-                {filteredMenu.map((group) => (
-                    <SidebarGroup key={group.title}>
+                {allMenuGroups.map((group, groupIndex) => (
+                    <SidebarGroup key={group.title ?? `sidebar-group-${groupIndex}`}>
                         {group.title && (
                             <SidebarGroupLabel>
                                 {group.title}
@@ -94,12 +117,55 @@ export function AppSidebar() {
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {group.items.map((item) => {
-                                    const isActive = location.pathname === item.url
+                                    const hasSubMenus = Boolean(item.menus?.length)
+                                    const isActive = item.url
+                                        ? location.pathname === item.url
+                                        : item.menus?.some((menu) => location.pathname === menu.url) ?? false
+
+                                    if (hasSubMenus) {
+                                        return (
+                                            <Collapsible
+                                                key={item.title}
+                                                defaultOpen={isActive}
+                                                asChild
+                                                className="group/collapsible"
+                                            >
+                                                <SidebarMenuItem>
+                                                    <CollapsibleTrigger asChild>
+                                                        <SidebarMenuButton isActive={isActive}>
+                                                            {item.icon && <item.icon className="h-4 w-4" />}
+                                                            <span>{item.title}</span>
+                                                            <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                                                        </SidebarMenuButton>
+                                                    </CollapsibleTrigger>
+                                                    <CollapsibleContent>
+                                                        <SidebarMenuSub>
+                                                            {item.menus?.map((menu) => (
+                                                                <SidebarMenuSubItem key={menu.url}>
+                                                                    <SidebarMenuSubButton
+                                                                        asChild
+                                                                        isActive={location.pathname === menu.url}
+                                                                    >
+                                                                        <Link to={menu.url}>{menu.title}</Link>
+                                                                    </SidebarMenuSubButton>
+                                                                </SidebarMenuSubItem>
+                                                            ))}
+                                                        </SidebarMenuSub>
+                                                    </CollapsibleContent>
+                                                </SidebarMenuItem>
+                                            </Collapsible>
+                                        )
+                                    }
+
+                                    if (!item.url) {
+                                        return null
+                                    }
+
                                     return (
                                         <SidebarMenuItem key={item.title}>
                                             <SidebarMenuButton asChild isActive={isActive}>
                                                 <Link to={item.url}>
-                                                    {group.icon && <group.icon className="h-4 w-4" />}
+                                                    {item.icon && <item.icon className="h-4 w-4" />}
                                                     {item.title}
                                                 </Link>
                                             </SidebarMenuButton>
@@ -110,57 +176,6 @@ export function AppSidebar() {
                         </SidebarGroupContent>
                     </SidebarGroup>
                 ))}
-
-                {bengkelList.length > 0 && (
-                    <SidebarGroup>
-                        <SidebarGroupLabel>Bengkel</SidebarGroupLabel>
-                        <SidebarGroupContent>
-                            <SidebarMenu>
-                                {bengkelList.map((bengkel) => {
-                                    const listUrl = routes.bengkel.replace(":id", String(bengkel.id))
-                                    const mgmtUrl = routes.environmentManagement.replace(":id", String(bengkel.id))
-                                    const isOpen =
-                                        location.pathname === listUrl ||
-                                        location.pathname === mgmtUrl
-
-                                    return (
-                                        <Collapsible key={bengkel.id} defaultOpen={isOpen} asChild className="group/collapsible">
-                                            <SidebarMenuItem>
-                                                <CollapsibleTrigger asChild>
-                                                    <SidebarMenuButton>
-                                                        <Hammer className="h-4 w-4" />
-                                                        <span>{bengkel.name}</span>
-                                                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
-                                                    </SidebarMenuButton>
-                                                </CollapsibleTrigger>
-                                                <CollapsibleContent>
-                                                    <SidebarMenuSub>
-                                                        <SidebarMenuSubItem>
-                                                            <SidebarMenuSubButton
-                                                                asChild
-                                                                isActive={location.pathname === listUrl}
-                                                            >
-                                                                <Link to={listUrl}>Bengkel List</Link>
-                                                            </SidebarMenuSubButton>
-                                                        </SidebarMenuSubItem>
-                                                        <SidebarMenuSubItem>
-                                                            <SidebarMenuSubButton
-                                                                asChild
-                                                                isActive={location.pathname === mgmtUrl}
-                                                            >
-                                                                <Link to={mgmtUrl}>Env Management</Link>
-                                                            </SidebarMenuSubButton>
-                                                        </SidebarMenuSubItem>
-                                                    </SidebarMenuSub>
-                                                </CollapsibleContent>
-                                            </SidebarMenuItem>
-                                        </Collapsible>
-                                    )
-                                })}
-                            </SidebarMenu>
-                        </SidebarGroupContent>
-                    </SidebarGroup>
-                )}
             </SidebarContent>
             <SidebarFooter>
                 <SidebarMenu>
