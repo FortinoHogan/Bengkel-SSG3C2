@@ -20,3 +20,13 @@ export interface AuthContextType {
   handleLoginAuth: (email: string) => Promise<void>
   handleLogoutAuth: () => Promise<void>
 }
+
+export interface  AddAuthenticatedUserPayload {
+  email: string
+  isAdmin: boolean
+}
+
+export interface  UpdateAuthenticatedUserRolePayload {
+  authenticatedUserId: number
+  isAdmin: boolean
+}

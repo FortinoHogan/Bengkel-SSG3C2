@@ -31,8 +31,7 @@ import {
 } from "@tanstack/react-table"
 import { Eye, Pencil } from "lucide-react"
 import { useEffect, useState } from "react"
-
-type DialogMode = "add" | "view" | "edit"
+import { DialogMode } from "./constant"
 
 const ManageBengkelPage = () => {
     const [isLoading, setIsLoading] = useState(true)

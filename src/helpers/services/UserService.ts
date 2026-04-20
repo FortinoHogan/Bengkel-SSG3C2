@@ -1,31 +1,6 @@
 import { IResponse } from "@/interfaces/Service.interface"
 import { supabase } from "../supabase/client"
-import { IAuthenticatedUser } from "@/interfaces/User.interface"
-
-type AddAuthenticatedUserPayload = {
-  email: string
-  isAdmin: boolean
-}
-
-type UpdateAuthenticatedUserRolePayload = {
-  authenticatedUserId: number
-  isAdmin: boolean
-}
-
-function getEmailRedirectUrl() {
-  const configuredRedirect = import.meta.env.VITE_AUTH_REDIRECT_URL?.trim()
-
-  if (!configuredRedirect) {
-    return `${window.location.origin}/auth`
-  }
-
-  try {
-    const parsed = new URL(configuredRedirect)
-    return `${parsed.origin}/auth`
-  } catch {
-    return `${window.location.origin}/auth`
-  }
-}
+import { AddAuthenticatedUserPayload, IAuthenticatedUser, UpdateAuthenticatedUserRolePayload } from "@/interfaces/User.interface"
 
 const getAuthenticatedUserList = async (
   setIsLoading?: (val: boolean) => void
