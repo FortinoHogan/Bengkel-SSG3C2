@@ -2,7 +2,8 @@ import { IAuthenticatedUser } from "@/interfaces/User.interface"
 
 export const InitialUserData: IAuthenticatedUser = {
   authenticatedUserId: 0,
-  createdAt: "",
+  created_at: "",
   email: "",
   isAdmin: false,
 }
+  

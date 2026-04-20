@@ -1,5 +1,5 @@
 import type { AppSidebarGroup } from "@/components/app-components/app-sidebar/AppSidebar.interface"
-import { House, ScrollText, User } from "lucide-react"
+import { House, User } from "lucide-react"
 import { routes } from "./paths"
 
 export const sidebarMenu: AppSidebarGroup[] = [
