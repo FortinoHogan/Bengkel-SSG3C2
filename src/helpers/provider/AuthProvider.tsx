@@ -1,27 +1,18 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react"
-import { createClient } from "@supabase/supabase-js"
 import type { AuthStatus } from "@/views/auth-page/AuthPage.type"
 import { UserService } from "@/helpers/services/UserService"
-import { IAuthenticatedUser } from "@/interfaces/User.interface"
+import { AuthContextType, IAuthenticatedUser } from "@/interfaces/User.interface"
 import { InitialUserData } from "@/constants/User"
+import { supabase } from "../supabase/client"
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-)
+const configuredAuthRedirectUrl = import.meta.env.VITE_AUTH_REDIRECT_URL?.trim()
 
-interface AuthContextType {
-  user: any
-  setUser: (val: any) => void
-  profile: any
-  setProfile: (val: any) => void
-  loading: boolean
-  authStatus: AuthStatus
-  authMessage: string
-  setAuthStatus: (val: AuthStatus) => void
-  setAuthMessage: (val: string) => void
-  handleLoginAuth: (email: string) => Promise<void>
-  handleLogoutAuth: () => Promise<void>
+function getAuthRedirectUrl() {
+  if (configuredAuthRedirectUrl) {
+    return configuredAuthRedirectUrl
+  }
+
+  return window.location.origin
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -88,7 +79,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: getAuthRedirectUrl(),
       },
     })
 
