@@ -75,7 +75,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const handleLoginAuth = async (email: string) => {
     setLoading(true)
-alert(getAuthRedirectUrl())
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
