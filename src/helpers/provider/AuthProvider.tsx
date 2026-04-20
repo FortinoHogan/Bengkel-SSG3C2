@@ -43,7 +43,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setAuthMessage(error.message)
         } else {
           setAuthStatus("success")
-          window.history.replaceState({}, document.title, "/")
+          const cleanUrl = `${window.location.pathname}${window.location.hash}`
+          window.history.replaceState({}, document.title, cleanUrl)
         }
       }
 

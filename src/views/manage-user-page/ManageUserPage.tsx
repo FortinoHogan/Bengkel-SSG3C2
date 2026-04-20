@@ -13,6 +13,14 @@ import {
 } from "@/components/ui/dialog"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import {
     Table,
@@ -25,8 +33,8 @@ import {
 import { UserService } from "@/helpers/services/UserService"
 import { IAuthenticatedUser } from "@/interfaces/User.interface"
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { Pencil } from "lucide-react"
-import { useEffect, useState } from "react"
+import { ArrowDown, ArrowUp, ArrowUpDown, Pencil } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
 
 const ManageUserPage = () => {
     const [isLoading, setIsLoading] = useState(true)
@@ -41,6 +49,12 @@ const ManageUserPage = () => {
     const [errorMessage, setErrorMessage] = useState("")
     const [isShowSuccess, setIsShowSuccess] = useState(false)
     const [successMessage, setSuccessMessage] = useState("")
+    const [searchInput, setSearchInput] = useState("")
+    const [searchQuery, setSearchQuery] = useState("")
+    const [page, setPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
+    const [sortBy, setSortBy] = useState<keyof IAuthenticatedUser | undefined>()
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 
     const fetchData = async () => {
         const result = await UserService.getAuthenticatedUserList(setIsLoading)
@@ -163,15 +177,96 @@ const ManageUserPage = () => {
         return parsedDate.toLocaleString()
     }
 
+    const handleSearch = () => {
+        setPage(1)
+        setSearchQuery(searchInput.trim().toLowerCase())
+    }
+
+    const handleSort = (column: keyof IAuthenticatedUser) => {
+        if (sortBy === column) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+            return
+        }
+
+        setSortBy(column)
+        setSortOrder("asc")
+    }
+
+    const filteredAndSortedUsers = useMemo(() => {
+        const filteredRows = searchQuery
+            ? users.filter((user) => user.email.toLowerCase().includes(searchQuery))
+            : users
+
+        if (!sortBy) {
+            return filteredRows
+        }
+
+        const sortedRows = [...filteredRows].sort((left, right) => {
+            const leftValue = left[sortBy]
+            const rightValue = right[sortBy]
+
+            if (leftValue == null && rightValue == null) {
+                return 0
+            }
+            if (leftValue == null) {
+                return sortOrder === "asc" ? -1 : 1
+            }
+            if (rightValue == null) {
+                return sortOrder === "asc" ? 1 : -1
+            }
+
+            if (typeof leftValue === "boolean" && typeof rightValue === "boolean") {
+                const leftNum = Number(leftValue)
+                const rightNum = Number(rightValue)
+                return sortOrder === "asc" ? leftNum - rightNum : rightNum - leftNum
+            }
+
+            const leftString = String(leftValue).toLowerCase()
+            const rightString = String(rightValue).toLowerCase()
+
+            if (leftString < rightString) {
+                return sortOrder === "asc" ? -1 : 1
+            }
+            if (leftString > rightString) {
+                return sortOrder === "asc" ? 1 : -1
+            }
+
+            return 0
+        })
+
+        return sortedRows
+    }, [users, searchQuery, sortBy, sortOrder])
+
+    const paginatedUsers = useMemo(() => {
+        const start = (page - 1) * pageSize
+        const end = start + pageSize
+        return filteredAndSortedUsers.slice(start, end)
+    }, [filteredAndSortedUsers, page, pageSize])
+
+    const hasNextPage = page * pageSize < filteredAndSortedUsers.length
+
     const columns: ColumnDef<IAuthenticatedUser>[] = [
         {
             id: "no",
             header: "No",
-            cell: ({ row }) => <p className="pl-2">{row.index + 1}</p>,
+            cell: ({ row }) => <p className="pl-2">{(page - 1) * pageSize + row.index + 1}</p>,
         },
         {
             accessorKey: "email",
-            header: "Email",
+            header: () => (
+                <Button variant="ghost" className="px-0" onClick={() => handleSort("email")}>
+                    Email
+                    {sortBy === "email" ? (
+                        sortOrder === "asc" ? (
+                            <ArrowUp className="ml-1" />
+                        ) : (
+                            <ArrowDown className="ml-1" />
+                        )
+                    ) : (
+                        <ArrowUpDown className="ml-1" />
+                    )}
+                </Button>
+            ),
             cell: ({ row }) => (
                 <p className="max-w-sm truncate" title={row.original.email}>
                     {row.original.email}
@@ -180,13 +275,21 @@ const ManageUserPage = () => {
         },
         {
             accessorKey: "isAdmin",
-            header: "Role",
-            cell: ({ row }) => <p>{row.original.isAdmin ? "Admin" : "User"}</p>,
-        },
-        {
-            accessorKey: "created_at",
-            header: "Created At",
-            cell: ({ row }) => <p>{formatDate(row.original.created_at)}</p>,
+            header: () => (
+                <Button variant="ghost" className="px-0" onClick={() => handleSort("isAdmin")}>
+                    Is Admin
+                    {sortBy === "isAdmin" ? (
+                        sortOrder === "asc" ? (
+                            <ArrowUp className="ml-1" />
+                        ) : (
+                            <ArrowDown className="ml-1" />
+                        )
+                    ) : (
+                        <ArrowUpDown className="ml-1" />
+                    )}
+                </Button>
+            ),
+            cell: ({ row }) => <p>{row.original.isAdmin ? "Yes" : "No"}</p>,
         },
         {
             id: "actions",
@@ -205,7 +308,7 @@ const ManageUserPage = () => {
     ]
 
     const table = useReactTable({
-        data: users,
+        data: paginatedUsers,
         columns,
         getCoreRowModel: getCoreRowModel(),
     })
@@ -227,41 +330,99 @@ const ManageUserPage = () => {
                 <Button onClick={openAdd}>Add Email Access</Button>
             </div>
 
-            <div className="rounded-lg border">
-                <Table>
-                    <TableHeader>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => (
-                                    <TableHead key={header.id}>
-                                        {header.isPlaceholder
-                                            ? null
-                                            : flexRender(header.column.columnDef.header, header.getContext())}
-                                    </TableHead>
-                                ))}
-                            </TableRow>
-                        ))}
-                    </TableHeader>
-                    <TableBody>
-                        {table.getRowModel().rows.length ? (
-                            table.getRowModel().rows.map((row) => (
-                                <TableRow key={row.id}>
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id}>
-                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                        </TableCell>
+            <div className="space-y-4">
+                <Field orientation="horizontal" className="flex items-center gap-2">
+                    <Input
+                        type="search"
+                        placeholder="Search by email"
+                        value={searchInput}
+                        onChange={(event) => setSearchInput(event.target.value)}
+                        onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                                handleSearch()
+                            }
+                        }}
+                    />
+                    <Button onClick={handleSearch}>Search</Button>
+                </Field>
+
+                <div className="rounded-lg border">
+                    <Table>
+                        <TableHeader>
+                            {table.getHeaderGroups().map((headerGroup) => (
+                                <TableRow key={headerGroup.id}>
+                                    {headerGroup.headers.map((header) => (
+                                        <TableHead key={header.id}>
+                                            {header.isPlaceholder
+                                                ? null
+                                                : flexRender(header.column.columnDef.header, header.getContext())}
+                                        </TableHead>
                                     ))}
                                 </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={columns.length} className="h-24 text-center">
-                                    No authenticated user found.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
+                            ))}
+                        </TableHeader>
+                        <TableBody>
+                            {table.getRowModel().rows.length ? (
+                                table.getRowModel().rows.map((row) => (
+                                    <TableRow key={row.id}>
+                                        {row.getVisibleCells().map((cell) => (
+                                            <TableCell key={cell.id}>
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                                        No authenticated user found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm text-muted-foreground">
+                        Page {page} • {paginatedUsers.length} row(s)
+                    </p>
+
+                    <div className="flex items-center gap-2">
+                        <Label htmlFor="page-size-user">Rows</Label>
+                        <Select
+                            value={String(pageSize)}
+                            onValueChange={(value) => {
+                                setPage(1)
+                                setPageSize(Number(value))
+                            }}
+                        >
+                            <SelectTrigger id="page-size-user" className="w-20">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent position="popper">
+                                <SelectItem value="5">5</SelectItem>
+                                <SelectItem value="10">10</SelectItem>
+                                <SelectItem value="20">20</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        <Button
+                            variant="outline"
+                            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                            disabled={page === 1}
+                        >
+                            Previous
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => setPage((prev) => prev + 1)}
+                            disabled={!hasNextPage}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                </div>
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -273,7 +434,7 @@ const ManageUserPage = () => {
                     <DialogHeader>
                         <DialogTitle>Add New User Access</DialogTitle>
                         <DialogDescription>
-                            Add email to AuthenticatedUser table, then send a magic link so the account can exist in Supabase Auth.
+                            Add a new email access for AuthenticatedUser.
                         </DialogDescription>
                     </DialogHeader>
                     <FieldGroup>
@@ -308,7 +469,7 @@ const ManageUserPage = () => {
                         <DialogClose asChild>
                             <Button variant="outline" onClick={closeAdd}>Cancel</Button>
                         </DialogClose>
-                        <Button onClick={handleAddUser}>Save and Send Link</Button>
+                        <Button onClick={handleAddUser}>Save</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

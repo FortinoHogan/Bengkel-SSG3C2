@@ -13,6 +13,14 @@ import {
 } from "@/components/ui/dialog"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import {
     Table,
     TableBody,
@@ -29,8 +37,8 @@ import {
     getCoreRowModel,
     useReactTable,
 } from "@tanstack/react-table"
-import { Download, Eye, Pencil } from "lucide-react"
-import { ChangeEvent, useEffect, useState } from "react"
+import { ArrowDown, ArrowUp, ArrowUpDown, Download, Eye, Pencil } from "lucide-react"
+import { ChangeEvent, useEffect, useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
 import { ModuleFormData } from "./interface"
 import { DialogMode, InitialModuleFormData } from "./constant"
@@ -52,6 +60,12 @@ const EnvironmentManagementPage = () => {
     const [errorMessage, setErrorMessage] = useState("")
     const [isShowSuccess, setIsShowSuccess] = useState(false)
     const [successMessage, setSuccessMessage] = useState("")
+    const [searchInput, setSearchInput] = useState("")
+    const [searchQuery, setSearchQuery] = useState("")
+    const [page, setPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
+    const [sortBy, setSortBy] = useState<keyof IBengkelModule | undefined>()
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 
     const fetchData = async () => {
         if (!id) return
@@ -175,20 +189,117 @@ const EnvironmentManagementPage = () => {
 
     const isViewMode = dialogMode === "view"
 
+    const handleSearch = () => {
+        setPage(1)
+        setSearchQuery(searchInput.trim().toLowerCase())
+    }
+
+    const handleSort = (column: keyof IBengkelModule) => {
+        if (sortBy === column) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+            return
+        }
+
+        setSortBy(column)
+        setSortOrder("asc")
+    }
+
+    const filteredAndSortedModules = useMemo(() => {
+        const filteredRows = searchQuery
+            ? modules.filter((module) => {
+                const envName = getEnvName(module.environmentId).toLowerCase()
+                return (
+                    envName.includes(searchQuery) ||
+                    module.baseUrl.toLowerCase().includes(searchQuery) ||
+                    module.basicAuth.toLowerCase().includes(searchQuery)
+                )
+            })
+            : modules
+
+        if (!sortBy) {
+            return filteredRows
+        }
+
+        return [...filteredRows].sort((left, right) => {
+            const leftValue = left[sortBy]
+            const rightValue = right[sortBy]
+
+            if (leftValue == null && rightValue == null) {
+                return 0
+            }
+            if (leftValue == null) {
+                return sortOrder === "asc" ? -1 : 1
+            }
+            if (rightValue == null) {
+                return sortOrder === "asc" ? 1 : -1
+            }
+
+            if (typeof leftValue === "number" && typeof rightValue === "number") {
+                return sortOrder === "asc" ? leftValue - rightValue : rightValue - leftValue
+            }
+
+            const leftString = String(leftValue).toLowerCase()
+            const rightString = String(rightValue).toLowerCase()
+
+            if (leftString < rightString) {
+                return sortOrder === "asc" ? -1 : 1
+            }
+            if (leftString > rightString) {
+                return sortOrder === "asc" ? 1 : -1
+            }
+
+            return 0
+        })
+    }, [modules, searchQuery, sortBy, sortOrder, environments])
+
+    const paginatedModules = useMemo(() => {
+        const start = (page - 1) * pageSize
+        const end = start + pageSize
+        return filteredAndSortedModules.slice(start, end)
+    }, [filteredAndSortedModules, page, pageSize])
+
+    const hasNextPage = page * pageSize < filteredAndSortedModules.length
+
     const columns: ColumnDef<IBengkelModule>[] = [
         {
             id: "no",
             header: "No",
-            cell: ({ row }) => <p className="max-w-md truncate pl-2">{row.index + 1}</p>,
+            cell: ({ row }) => <p className="max-w-md truncate pl-2">{(page - 1) * pageSize + row.index + 1}</p>,
         },
         {
             accessorKey: "environmentId",
-            header: "Environment",
+            header: () => (
+                <Button variant="ghost" className="px-0" onClick={() => handleSort("environmentId")}>
+                    Environment
+                    {sortBy === "environmentId" ? (
+                        sortOrder === "asc" ? (
+                            <ArrowUp className="ml-1" />
+                        ) : (
+                            <ArrowDown className="ml-1" />
+                        )
+                    ) : (
+                        <ArrowUpDown className="ml-1" />
+                    )}
+                </Button>
+            ),
             cell: ({ row }) => <p className="max-w-md truncate">{getEnvName(row.original.environmentId)}</p>,
         },
         {
             accessorKey: "baseUrl",
-            header: "Base URL",
+            header: () => (
+                <Button variant="ghost" className="px-0" onClick={() => handleSort("baseUrl")}>
+                    Base URL
+                    {sortBy === "baseUrl" ? (
+                        sortOrder === "asc" ? (
+                            <ArrowUp className="ml-1" />
+                        ) : (
+                            <ArrowDown className="ml-1" />
+                        )
+                    ) : (
+                        <ArrowUpDown className="ml-1" />
+                    )}
+                </Button>
+            ),
             cell: ({ row }) => (
                 <p className="max-w-xs truncate" title={row.original.baseUrl}>
                     {row.original.baseUrl}
@@ -197,7 +308,20 @@ const EnvironmentManagementPage = () => {
         },
         {
             accessorKey: "basicAuth",
-            header: "Basic Auth",
+            header: () => (
+                <Button variant="ghost" className="px-0" onClick={() => handleSort("basicAuth")}>
+                    Basic Auth
+                    {sortBy === "basicAuth" ? (
+                        sortOrder === "asc" ? (
+                            <ArrowUp className="ml-1" />
+                        ) : (
+                            <ArrowDown className="ml-1" />
+                        )
+                    ) : (
+                        <ArrowUpDown className="ml-1" />
+                    )}
+                </Button>
+            ),
             cell: ({ row }) => (
                 <p className="max-w-xs truncate" title={row.original.basicAuth}>
                     {row.original.basicAuth}
@@ -242,7 +366,7 @@ const EnvironmentManagementPage = () => {
     ]
 
     const table = useReactTable({
-        data: modules,
+        data: paginatedModules,
         columns,
         getCoreRowModel: getCoreRowModel(),
     })
@@ -257,41 +381,99 @@ const EnvironmentManagementPage = () => {
                 Environment Management
             </h1>
             <p className="mb-4 text-muted-foreground">Ini page buat configure env bengkel</p>
-            <div className="rounded-lg border">
-                <Table>
-                    <TableHeader>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => (
-                                    <TableHead key={header.id}>
-                                        {header.isPlaceholder
-                                            ? null
-                                            : flexRender(header.column.columnDef.header, header.getContext())}
-                                    </TableHead>
-                                ))}
-                            </TableRow>
-                        ))}
-                    </TableHeader>
-                    <TableBody>
-                        {table.getRowModel().rows.length ? (
-                            table.getRowModel().rows.map((row) => (
-                                <TableRow key={row.id}>
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id}>
-                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                        </TableCell>
+            <div className="space-y-4">
+                <Field orientation="horizontal" className="flex items-center gap-2">
+                    <Input
+                        type="search"
+                        placeholder="Search by environment, base url, or basic auth"
+                        value={searchInput}
+                        onChange={(event) => setSearchInput(event.target.value)}
+                        onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                                handleSearch()
+                            }
+                        }}
+                    />
+                    <Button onClick={handleSearch}>Search</Button>
+                </Field>
+
+                <div className="rounded-lg border">
+                    <Table>
+                        <TableHeader>
+                            {table.getHeaderGroups().map((headerGroup) => (
+                                <TableRow key={headerGroup.id}>
+                                    {headerGroup.headers.map((header) => (
+                                        <TableHead key={header.id}>
+                                            {header.isPlaceholder
+                                                ? null
+                                                : flexRender(header.column.columnDef.header, header.getContext())}
+                                        </TableHead>
                                     ))}
                                 </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={columns.length} className="h-24 text-center">
-                                    No modules found.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
+                            ))}
+                        </TableHeader>
+                        <TableBody>
+                            {table.getRowModel().rows.length ? (
+                                table.getRowModel().rows.map((row) => (
+                                    <TableRow key={row.id}>
+                                        {row.getVisibleCells().map((cell) => (
+                                            <TableCell key={cell.id}>
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                                        No modules found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm text-muted-foreground">
+                        Page {page} • {paginatedModules.length} row(s)
+                    </p>
+
+                    <div className="flex items-center gap-2">
+                        <Label htmlFor="page-size-env">Rows</Label>
+                        <Select
+                            value={String(pageSize)}
+                            onValueChange={(value) => {
+                                setPage(1)
+                                setPageSize(Number(value))
+                            }}
+                        >
+                            <SelectTrigger id="page-size-env" className="w-20">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent position="popper">
+                                <SelectItem value="5">5</SelectItem>
+                                <SelectItem value="10">10</SelectItem>
+                                <SelectItem value="20">20</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        <Button
+                            variant="outline"
+                            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                            disabled={page === 1}
+                        >
+                            Previous
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => setPage((prev) => prev + 1)}
+                            disabled={!hasNextPage}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                </div>
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

@@ -40,7 +40,12 @@ export function AppSidebar() {
     const [isShowError, setIsShowError] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
-    const filteredMenu = sidebarMenu.filter(group => !group.isAdminOnly || profile?.isAdmin);
+    const filteredMenu = sidebarMenu
+        .map((group) => ({
+            ...group,
+            items: group.items.filter((item) => !item.isAdminOnly || profile?.isAdmin),
+        }))
+        .filter((group) => group.items.length > 0)
 
     const bengkelGroup: AppSidebarGroup | null = bengkelList.length
         ? {

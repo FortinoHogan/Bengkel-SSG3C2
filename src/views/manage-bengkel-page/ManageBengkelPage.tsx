@@ -13,6 +13,14 @@ import {
 } from "@/components/ui/dialog"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import {
     Table,
     TableBody,
@@ -29,8 +37,8 @@ import {
     getCoreRowModel,
     useReactTable,
 } from "@tanstack/react-table"
-import { Eye, Pencil } from "lucide-react"
-import { useEffect, useState } from "react"
+import { ArrowDown, ArrowUp, ArrowUpDown, Eye, Pencil } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
 import { DialogMode } from "./constant"
 
 const ManageBengkelPage = () => {
@@ -47,6 +55,12 @@ const ManageBengkelPage = () => {
     const [errorMessage, setErrorMessage] = useState("")
     const [isShowSuccess, setIsShowSuccess] = useState(false)
     const [successMessage, setSuccessMessage] = useState("")
+    const [searchInput, setSearchInput] = useState("")
+    const [searchQuery, setSearchQuery] = useState("")
+    const [page, setPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
+    const [sortBy, setSortBy] = useState<keyof IMsBengkel | undefined>()
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 
     const fetchData = async () => {
         const res = await BengkelService.getMasterBengkelList(setIsLoading)
@@ -133,15 +147,98 @@ const ManageBengkelPage = () => {
 
     const isViewMode = dialogMode === "view"
 
+    const handleSearch = () => {
+        setPage(1)
+        setSearchQuery(searchInput.trim().toLowerCase())
+    }
+
+    const handleSort = (column: keyof IMsBengkel) => {
+        if (sortBy === column) {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+            return
+        }
+
+        setSortBy(column)
+        setSortOrder("asc")
+    }
+
+    const filteredAndSortedBengkels = useMemo(() => {
+        const filteredRows = searchQuery
+            ? bengkelList.filter((item) =>
+                item.bengkelName.toLowerCase().includes(searchQuery)
+            )
+            : bengkelList
+
+        if (!sortBy) {
+            return filteredRows
+        }
+
+        return [...filteredRows].sort((left, right) => {
+            const leftValue = left[sortBy]
+            const rightValue = right[sortBy]
+
+            if (leftValue == null && rightValue == null) {
+                return 0
+            }
+            if (leftValue == null) {
+                return sortOrder === "asc" ? -1 : 1
+            }
+            if (rightValue == null) {
+                return sortOrder === "asc" ? 1 : -1
+            }
+
+            if (typeof leftValue === "number" && typeof rightValue === "number") {
+                return sortOrder === "asc" ? leftValue - rightValue : rightValue - leftValue
+            }
+
+            const leftString = String(leftValue).toLowerCase()
+            const rightString = String(rightValue).toLowerCase()
+
+            if (leftString < rightString) {
+                return sortOrder === "asc" ? -1 : 1
+            }
+            if (leftString > rightString) {
+                return sortOrder === "asc" ? 1 : -1
+            }
+
+            return 0
+        })
+    }, [bengkelList, searchQuery, sortBy, sortOrder])
+
+    const paginatedBengkelList = useMemo(() => {
+        const start = (page - 1) * pageSize
+        const end = start + pageSize
+        return filteredAndSortedBengkels.slice(start, end)
+    }, [filteredAndSortedBengkels, page, pageSize])
+
+    const hasNextPage = page * pageSize < filteredAndSortedBengkels.length
+
     const columns: ColumnDef<IMsBengkel>[] = [
         {
             id: "no",
             header: "No",
-            cell: ({ row }) => <p className="pl-2">{row.index + 1}</p>,
+            cell: ({ row }) => <p className="pl-2">{(page - 1) * pageSize + row.index + 1}</p>,
         },
         {
             accessorKey: "bengkelName",
-            header: "Bengkel Name",
+            header: () => (
+                <Button
+                    variant="ghost"
+                    className="px-0"
+                    onClick={() => handleSort("bengkelName")}
+                >
+                    Bengkel Name
+                    {sortBy === "bengkelName" ? (
+                        sortOrder === "asc" ? (
+                            <ArrowUp className="ml-1" />
+                        ) : (
+                            <ArrowDown className="ml-1" />
+                        )
+                    ) : (
+                        <ArrowUpDown className="ml-1" />
+                    )}
+                </Button>
+            ),
             cell: ({ row }) => (
                 <p className="max-w-xs truncate" title={row.original.bengkelName}>
                     {row.original.bengkelName}
@@ -178,7 +275,7 @@ const ManageBengkelPage = () => {
     ]
 
     const table = useReactTable({
-        data: bengkelList,
+        data: paginatedBengkelList,
         columns,
         getCoreRowModel: getCoreRowModel(),
     })
@@ -198,41 +295,99 @@ const ManageBengkelPage = () => {
             <div className="mb-4">
                 <Button onClick={openAdd}>Add New</Button>
             </div>
-            <div className="rounded-lg border">
-                <Table>
-                    <TableHeader>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => (
-                                    <TableHead key={header.id}>
-                                        {header.isPlaceholder
-                                            ? null
-                                            : flexRender(header.column.columnDef.header, header.getContext())}
-                                    </TableHead>
-                                ))}
-                            </TableRow>
-                        ))}
-                    </TableHeader>
-                    <TableBody>
-                        {table.getRowModel().rows.length ? (
-                            table.getRowModel().rows.map((row) => (
-                                <TableRow key={row.id}>
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id}>
-                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                        </TableCell>
+            <div className="space-y-4">
+                <Field orientation="horizontal" className="flex items-center gap-2">
+                    <Input
+                        type="search"
+                        placeholder="Search by bengkel name"
+                        value={searchInput}
+                        onChange={(event) => setSearchInput(event.target.value)}
+                        onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                                handleSearch()
+                            }
+                        }}
+                    />
+                    <Button onClick={handleSearch}>Search</Button>
+                </Field>
+
+                <div className="rounded-lg border">
+                    <Table>
+                        <TableHeader>
+                            {table.getHeaderGroups().map((headerGroup) => (
+                                <TableRow key={headerGroup.id}>
+                                    {headerGroup.headers.map((header) => (
+                                        <TableHead key={header.id}>
+                                            {header.isPlaceholder
+                                                ? null
+                                                : flexRender(header.column.columnDef.header, header.getContext())}
+                                        </TableHead>
                                     ))}
                                 </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={columns.length} className="h-24 text-center">
-                                    No bengkel found.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
+                            ))}
+                        </TableHeader>
+                        <TableBody>
+                            {table.getRowModel().rows.length ? (
+                                table.getRowModel().rows.map((row) => (
+                                    <TableRow key={row.id}>
+                                        {row.getVisibleCells().map((cell) => (
+                                            <TableCell key={cell.id}>
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                                        No bengkel found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm text-muted-foreground">
+                        Page {page} • {paginatedBengkelList.length} row(s)
+                    </p>
+
+                    <div className="flex items-center gap-2">
+                        <Label htmlFor="page-size-bengkel">Rows</Label>
+                        <Select
+                            value={String(pageSize)}
+                            onValueChange={(value) => {
+                                setPage(1)
+                                setPageSize(Number(value))
+                            }}
+                        >
+                            <SelectTrigger id="page-size-bengkel" className="w-20">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent position="popper">
+                                <SelectItem value="5">5</SelectItem>
+                                <SelectItem value="10">10</SelectItem>
+                                <SelectItem value="20">20</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        <Button
+                            variant="outline"
+                            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                            disabled={page === 1}
+                        >
+                            Previous
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => setPage((prev) => prev + 1)}
+                            disabled={!hasNextPage}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                </div>
             </div>
 
             {/* Add / View / Edit Dialog */}

@@ -20,6 +20,7 @@ export const sidebarMenu: AppSidebarGroup[] = [
         icon: User,
         title: "Manage User",
         url: routes.manageUser,
+        isAdminOnly: true,
       },
       {
         icon: Wrench,
@@ -27,6 +28,5 @@ export const sidebarMenu: AppSidebarGroup[] = [
         url: routes.manageBengkel,
       },
     ],
-    isAdminOnly: true,
   },
 ]
