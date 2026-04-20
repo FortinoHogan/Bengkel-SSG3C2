@@ -164,19 +164,6 @@ const ManageUserPage = () => {
         fetchData()
     }
 
-    const formatDate = (dateValue?: string) => {
-        if (!dateValue) {
-            return "-"
-        }
-
-        const parsedDate = new Date(dateValue)
-        if (Number.isNaN(parsedDate.getTime())) {
-            return "-"
-        }
-
-        return parsedDate.toLocaleString()
-    }
-
     const handleSearch = () => {
         setPage(1)
         setSearchQuery(searchInput.trim().toLowerCase())
