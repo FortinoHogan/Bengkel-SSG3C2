@@ -6,10 +6,10 @@ const AppModal = (props: AppModalProps) => {
     
     return (
         <AlertDialog open={open} onOpenChange={onClose}> 
-            <AlertDialogContent>
+            <AlertDialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto">
                 <AlertDialogHeader>
                     <AlertDialogTitle>{title}</AlertDialogTitle>
-                    <AlertDialogDescription>
+                    <AlertDialogDescription className="max-w-full whitespace-pre-wrap wrap-break-word">
                         {description}
                     </AlertDialogDescription>
                 </AlertDialogHeader>

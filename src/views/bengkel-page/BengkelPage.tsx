@@ -282,6 +282,8 @@ const BengkelPage = () => {
   }
 
   const handleSort = (column: keyof IBengkelDetail) => {
+    setPage(1)
+
     if (sortBy === column) {
       setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
       return
@@ -647,7 +649,7 @@ const BengkelPage = () => {
         </InputGroup>
       </div>
       <Dialog open={isModuleDialogOpen} onOpenChange={setIsModuleDialogOpen}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Bengkel Module</DialogTitle>
             <DialogDescription>
@@ -695,7 +697,7 @@ const BengkelPage = () => {
             <Button variant={"secondary"} onClick={() => handleDownload()}>Download Environment</Button>
             <Button onClick={openAddDialog}>Add New</Button>
             <DialogContent
-              className="sm:max-w-4xl"
+              className="sm:max-w-4xl max-h-[calc(100dvh-2rem)] overflow-y-auto"
               onInteractOutside={(e) => e.preventDefault()}
               onCloseAutoFocus={(e) => e.preventDefault()}
             >

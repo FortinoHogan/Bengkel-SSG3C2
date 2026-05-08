@@ -144,8 +144,6 @@ const getBengkelDetailList = async (
       .select("*")
       .eq("bengkelId", payload.bengkelId)
       .range((payload.page - 1) * payload.size, payload.page * payload.size - 1)
-      .order("created_at", { ascending: false })
-      .order("bengkelDetailId", { ascending: false })
 
     if (payload.searchQuery.trim()) {
       query = query.or(
@@ -157,6 +155,12 @@ const getBengkelDetailList = async (
       query = query.order(payload.sortBy, {
         ascending: payload.sortOrder !== "desc",
       })
+      query = query.order("bengkelDetailId", {
+        ascending: payload.sortOrder !== "desc",
+      })
+    } else {
+      query = query.order("created_at", { ascending: false })
+      query = query.order("bengkelDetailId", { ascending: false })
     }
 
     const { data, error } = await query
